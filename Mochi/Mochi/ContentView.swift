@@ -6,10 +6,21 @@
 //
 
 import SwiftUI
+import Combine
 
 struct ContentView: View {
     @State private var health = 100
     @State private var sessionStartTime: Date? = nil
+    @State private var currentDate = Date()
+    
+    private var currentHealth: Int {
+        if let startTime = sessionStartTime {
+            let elapsed = currentDate.timeIntervalSince(startTime)
+            return healthForElapsedTime(elapsed)
+        }
+        
+        return health
+    }
     
     private var petMood: String {
         if health >= 80 {
@@ -53,6 +64,25 @@ struct ContentView: View {
         return String(format: "%02d:%02d:%02d", hours, minutes, remainingSeconds)
     }
     
+    private func healthForElapsedTime(_ seconds: TimeInterval) -> Int {
+        
+        if seconds < 10 {
+            return 100
+        } else if seconds < 20 {
+            return 90
+        } else if seconds < 30 {
+            return 80
+        } else if seconds < 40 {
+            return 65
+        } else if seconds < 60 {
+            return 50
+        } else if seconds < 90 {
+            return 25
+        } else {
+            return 0
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 25) {
             
@@ -66,11 +96,11 @@ struct ContentView: View {
             Text(petEmoji)
                 .font(.system(size: 150))
             
-            Text("❤️ \(health) / 100")
+            Text("❤️ \(currentHealth) / 100")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            ProgressView(value: Double(health) / 100.0)
+            ProgressView(value: Double(currentHealth) / 100.0)
                 .padding(.horizontal, 40)
             
             Text(petMood)
@@ -84,11 +114,18 @@ struct ContentView: View {
                     
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         let elapsed = context.date.timeIntervalSince(startTime)
-                        
-                        Text(formatTime(elapsed))
-                            .font(.title)
-                            .fontWeight(.bold)
-                            .monospacedDigit()
+                        let currentHealth = healthForElapsedTime(elapsed)
+
+                        VStack(spacing: 10) {
+                            Text(formatTime(elapsed))
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .monospacedDigit()
+
+                            Text("❤️ \(currentHealth) / 100")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                        }
                     }
                     
                     Button("I'm Putting My Phone Down") {
@@ -103,6 +140,11 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
+        }
+        .onReceive(
+            Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+        ) { date in
+            currentDate = date
         }
         .padding()
     }
