@@ -309,196 +309,256 @@ struct ContentView: View {
     }
     
     var body: some View {
-        VStack(spacing: 25) {
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
             
-            Text("Mochi")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-            
-            Text("Your screen-time pet")
-                .foregroundStyle(.secondary)
-            
-            Text(petEmoji)
-                .font(.system(size: 140))
-                .scaleEffect(petScale)
-                .offset(y: petOffset)
-                .onAppear {
-                    startPetAnimation()
-                }
-                .onChange(of: currentHealth) {
-                    startPetAnimation()
-                }
-            
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 
-                HStack {
-                    Text("Health")
-                        .font(.headline)
-                    
-                    Spacer()
-                    
-                    Text("❤️ \(currentHealth)/100")
-                        .font(.headline)
-                }
                 
-                ProgressView(value: Double(currentHealth) / 100.0)
+                Text("Mochi")
+                    .font(.system(size: 32, weight: .bold))
+                
+                Text("Your screen-time pet")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 8)
+            
+                
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    .yellow.opacity(
+                                        currentHealth >= 50 ? 0.18 : 0.08
+                                    ),
+                                    .clear
+                                ],
+                                center: .center,
+                                startRadius: 10,
+                                endRadius: 100
+                            )
+                        )
+                        .frame(width: 190, height: 190)
+                    
+                    Text(petEmoji)
+                        .font(.system(size: 135))
+                        .scaleEffect(petScale)
+                        .offset(y: petOffset)
+                        .shadow(
+                            color: .yellow.opacity(0.15),
+                            radius: 15
+                        )
+                        .onAppear {
+                            startPetAnimation()
+                        }
+                        .onChange(of: currentHealth) {
+                            startPetAnimation()
+                        }
+                }
+                .frame(height: 180)
+                
+                
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Health")
+                            .font(.headline)
+                        
+                        Spacer()
+                        
+                        Text("❤️ \(currentHealth)/100")
+                            .font(.headline)
+                    }
+                    
+                    ProgressView(
+                        value: Double(currentHealth) / 100.0
+                    )
                     .tint(.pink)
-            }
-            VStack(spacing: 10) {
-                
-                HStack {
-                    Text("Today's Usage")
-                        .font(.headline)
-                    
-                    Spacer()
-                    
-                    Text(formatUsage(todayUsage))
-                        .font(.headline)
                 }
+                .mochiCard()
                 
-                ProgressView(
-                    value: min(todayUsage / dailyGoalSeconds, 1.0)
-                )
-                .tint(.orange)
                 
-                Text("Goal: \(formatUsage(dailyGoalSeconds))")
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Today's Usage")
+                            .font(.headline)
+                        
+                        Spacer()
+                        
+                        Text(formatUsage(todayUsage))
+                            .font(.headline)
+                    }
+                    
+                    ProgressView(
+                        value: min(
+                            todayUsage / dailyGoalSeconds,
+                            1.0
+                        )
+                    )
+                    .tint(.orange)
+                    
+                    HStack {
+                        Text("Goal: \(formatUsage(dailyGoalSeconds))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        Spacer()
+                        
+                        Picker("Daily Goal", selection: $dailyGoalSeconds) {
+                            Text("1 hour").tag(1 * 60 * 60.0)
+                            Text("2 hours").tag(2 * 60 * 60.0)
+                            Text("3 hours").tag(3 * 60 * 60.0)
+                            Text("4 hours").tag(4 * 60 * 60.0)
+                        }
+                        .pickerStyle(.menu)
+                    }
+                }
+                .mochiCard()
+                
+                
+                VStack(spacing: 5) {
+                    Text("🔥 \(streakCount) Day Streak")
+                        .font(.headline)
+
+                    Text(
+                        streakCount == 0
+                        ? "Stay under your goal!"
+                        : "Keep it going! 🔥"
+                    )
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                
-                Picker("Daily Goal", selection: $dailyGoalSeconds) {
-                    Text("1 hour").tag(1 * 60 * 60.0)
-                    Text("2 hours").tag(2 * 60 * 60.0)
-                    Text("3 hours").tag(3 * 60 * 60.0)
-                    Text("4 hours").tag(4 * 60 * 60.0)
                 }
-                .pickerStyle(.menu)
-            }
-            VStack(spacing: 8) {
+                .mochiCard()
                 
-                Text("🔥 \(streakCount) Day Streak")
+                
+                Text(petMood)
                     .font(.headline)
+                    .lineLimit(1)
                 
-                if streakCount == 0 {
-                    Text("Stay under your goal today!")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("Keep it going! 🔥")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(.thinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .padding(.horizontal)
-            
-            Text(petMood)
-                .font(.headline)
-            
-            if sessionStartTime > 0 {
                 
-                VStack(spacing: 10) {
+                if sessionStartTime > 0 {
                     
-                    Text("📱 Using Phone")
-                        .font(.headline)
-                    
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        let startTime = Date(timeIntervalSince1970: sessionStartTime)
-                        let elapsed = context.date.timeIntervalSince(startTime)
-                        let sessionHealth = healthForElapsedTime(elapsed)
+                    VStack(spacing: 6) {
+                        Text("📱 Using Phone")
+                            .font(.headline)
                         
-                        VStack(spacing: 10) {
+                        TimelineView(
+                            .periodic(from: .now, by: 1)
+                        ) { context in
                             
-                            Text(formatTime(elapsed))
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .monospacedDigit()
+                            let startTime = Date(
+                                timeIntervalSince1970: sessionStartTime
+                            )
                             
-                            Text("❤️ \(sessionHealth) / 100")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    
-                    Button("I'm Putting My Phone Down") {
-                        cancelBreakNotifications()
-                        
-                        let startTime = Date(timeIntervalSince1970: sessionStartTime)
-                        let sessionDuration = Date().timeIntervalSince(startTime)
-                        
-                        dailyUsageSeconds += sessionDuration
-                        
-                        health = currentHealth
-                        sessionStartTime = 0
-                        recoveryStartTime = Date().timeIntervalSince1970
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                
-            } else if recoveryStartTime > 0 {
-                
-                VStack(spacing: 10) {
-                    
-                    Text("🌱 Recovery Mode")
-                        .font(.headline)
-                    
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        let startTime = Date(timeIntervalSince1970: recoveryStartTime)
-                            let elapsed = context.date.timeIntervalSince(startTime)
-                            let recoveredHealth = healthForRecovery(elapsed)
-
-                        VStack(spacing: 10) {
+                            let elapsed =
+                                context.date.timeIntervalSince(startTime)
                             
-                            Text(formatTime(elapsed))
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .monospacedDigit()
+                            let sessionHealth =
+                                healthForElapsedTime(elapsed)
                             
-                            Text("❤️ \(recoveredHealth) / 100")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                            
-                            if recoveredHealth >= 100 {
-                                Text("Mochi is fully recovered! 🎉🐣")
-                                    .font(.headline)
-                            } else if recoveredHealth >= 75 {
-                                Text("Mochi feels so much better! 🥰")
-                                    .font(.headline)
-                            } else if recoveredHealth >= 50 {
-                                Text("You're doing great! Keep resting. 🌱")
-                                    .font(.headline)
-                            } else {
-                                Text("Thank you for putting your phone down! 🥹")
-                                    .font(.headline)
+                            HStack(spacing: 20) {
+                                Text(formatTime(elapsed))
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                    .monospacedDigit()
+                                
+                                Text("❤️ \(sessionHealth)/100")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
                             }
                         }
+                        
+                        Button("I'm Putting My Phone Down") {
+                            cancelBreakNotifications()
+                            
+                            let startTime = Date(
+                                timeIntervalSince1970: sessionStartTime
+                            )
+                            
+                            let sessionDuration =
+                                Date().timeIntervalSince(startTime)
+                            
+                            dailyUsageSeconds += sessionDuration
+                            
+                            health = currentHealth
+                            sessionStartTime = 0
+                            recoveryStartTime =
+                                Date().timeIntervalSince1970
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                     
-                    Button("I'm Back") {
-                        health = currentHealth
-                        recoveryStartTime = 0
+                } else if recoveryStartTime > 0 {
+                    
+                    VStack(spacing: 6) {
+                        Text("🌱 Recovery Mode")
+                            .font(.headline)
+                        
+                        TimelineView(
+                            .periodic(from: .now, by: 1)
+                        ) { context in
+                            
+                            let startTime = Date(
+                                timeIntervalSince1970: recoveryStartTime
+                            )
+                            
+                            let elapsed =
+                                context.date.timeIntervalSince(startTime)
+                            
+                            let recoveredHealth =
+                                healthForRecovery(elapsed)
+                            
+                            HStack(spacing: 20) {
+                                Text(formatTime(elapsed))
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                    .monospacedDigit()
+                                
+                                Text("❤️ \(recoveredHealth)/100")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                        
+                        Button("I'm Back") {
+                            health = currentHealth
+                            recoveryStartTime = 0
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    
+                } else {
+                    
+                    Button("Start Using Phone") {
+                        startSession()
                     }
                     .buttonStyle(.borderedProminent)
                 }
-                
-            } else {
-                
-                Button("Start Using Phone") {
-                    startSession()
-                }
-                .buttonStyle(.borderedProminent)
             }
+            .padding(.horizontal, 8)
+            .padding(.top, 4)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .foregroundStyle(.white)
         }
         .onReceive(
-            Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+            Timer.publish(
+                every: 1,
+                on: .main,
+                in: .common
+            ).autoconnect()
         ) { date in
+            
             currentDate = date
             
             if recoveryStartTime > 0 {
-                let startTime = Date(timeIntervalSince1970: recoveryStartTime)
-                let elapsed = date.timeIntervalSince(startTime)
+                let startTime = Date(
+                    timeIntervalSince1970: recoveryStartTime
+                )
+                
+                let elapsed =
+                    date.timeIntervalSince(startTime)
                 
                 if healthForRecovery(elapsed) >= 100 {
                     health = 100
@@ -506,10 +566,26 @@ struct ContentView: View {
                 }
             }
         }
-        .padding()
-        .onAppear{
+        .onAppear {
             resetUsageIfNewDay()
         }
+    }
+}
+
+struct MochiCardModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .padding(.horizontal)
+    }
+}
+
+extension View {
+    func mochiCard() -> some View {
+        modifier(MochiCardModifier())
     }
 }
 
