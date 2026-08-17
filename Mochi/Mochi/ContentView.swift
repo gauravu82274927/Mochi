@@ -8,12 +8,29 @@
 import SwiftUI
 
 struct ContentView: View {
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        VStack(spacing: 25) {
+            
+            Text("Mochi")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+            
+            Text("Your screen-time pet")
+                .foregroundStyle(.secondary)
+            
+            Text("🐣")
+                .font(.system(size: 150))
+            
+            Text("❤️ 100 / 100")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            ProgressView(value: 1.0)
+                .padding(.horizontal, 40)
+            
+            Text("Mochi is feeling great! 😊")
+                .font(.headline)
         }
         .padding()
     }
