@@ -18,6 +18,7 @@ struct ContentView: View {
     @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 2 * 60 * 60
     @AppStorage("streakCount") private var streakCount = 0
     @AppStorage("streakLastDate") private var streakLastDate = ""
+    @AppStorage("sessionStartHealth") private var sessionStartHealth = 100
     @State private var currentDate = Date()
     @State private var testingMode = true
     @State private var petScale = 1.0
@@ -105,7 +106,9 @@ struct ContentView: View {
     private func startSession() {
         cancelBreakNotifications()
         
+        sessionStartHealth = health
         sessionStartTime = Date().timeIntervalSince1970
+        
         requestNotificationPermission()
     }
     
@@ -271,23 +274,27 @@ struct ContentView: View {
     
     private func healthForElapsedTime(_ seconds: TimeInterval) -> Int {
         if testingMode {
+            let healthLoss: Int
+            
             if seconds < 10 {
-                return 100
+                healthLoss = 0
             } else if seconds < 20 {
-                return 90
+                healthLoss = 10
             } else if seconds < 30 {
-                return 80
+                healthLoss = 20
             } else if seconds < 40 {
-                return 65
+                healthLoss = 35
             } else if seconds < 60 {
-                return 50
+                healthLoss = 50
             } else if seconds < 90 {
-                return 25
+                healthLoss = 75
             } else {
-                return 0
+                healthLoss = 100
             }
             
-        } else {
+            return max(0, sessionStartHealth - healthLoss)
+        }
+        else {
             let twoHours: TimeInterval = 2 * 60 * 60
             let percentage = max(0, 1 - (seconds / twoHours))
             
