@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var sessionStartTime: Date? = nil
     @AppStorage("recoveryStartTime") private var recoveryStartTime: Double = 0
     @State private var currentDate = Date()
+    @State private var testingMode = true
     
     private var currentHealth: Int {
         if let startTime = sessionStartTime {
@@ -72,21 +73,28 @@ struct ContentView: View {
     }
     
     private func healthForElapsedTime(_ seconds: TimeInterval) -> Int {
-        
-        if seconds < 10 {
-            return 100
-        } else if seconds < 20 {
-            return 90
-        } else if seconds < 30 {
-            return 80
-        } else if seconds < 40 {
-            return 65
-        } else if seconds < 60 {
-            return 50
-        } else if seconds < 90 {
-            return 25
+        if testingMode {
+            if seconds < 10 {
+                return 100
+            } else if seconds < 20 {
+                return 90
+            } else if seconds < 30 {
+                return 80
+            } else if seconds < 40 {
+                return 65
+            } else if seconds < 60 {
+                return 50
+            } else if seconds < 90 {
+                return 25
+            } else {
+                return 0
+            }
+            
         } else {
-            return 0
+            let twoHours: TimeInterval = 2 * 60 * 60
+            let percentage = max(0, 1 - (seconds / twoHours))
+            
+            return Int(percentage * 100)
         }
     }
     
