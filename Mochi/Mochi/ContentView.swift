@@ -11,7 +11,7 @@ import Combine
 struct ContentView: View {
     @AppStorage("mochiHealth") private var health = 100
     @State private var sessionStartTime: Date? = nil
-    @State private var recoveryStartTime: Date? = nil
+    @AppStorage("recoveryStartTime") private var recoveryStartTime: Double = 0
     @State private var currentDate = Date()
     
     private var currentHealth: Int {
@@ -20,7 +20,8 @@ struct ContentView: View {
             return healthForElapsedTime(elapsed)
         }
         
-        if let startTime = recoveryStartTime {
+        if recoveryStartTime > 0 {
+            let startTime = Date(timeIntervalSince1970: recoveryStartTime)
             let elapsed = currentDate.timeIntervalSince(startTime)
             return healthForRecovery(elapsed)
         }
@@ -145,12 +146,12 @@ struct ContentView: View {
                     Button("I'm Putting My Phone Down") {
                         health = currentHealth
                         sessionStartTime = nil
-                        recoveryStartTime = Date()
+                        recoveryStartTime = Date().timeIntervalSince1970
                     }
                     .buttonStyle(.borderedProminent)
                 }
                 
-            } else if let startTime = recoveryStartTime {
+            } else if recoveryStartTime > 0 {
                 
                 VStack(spacing: 10) {
                     
@@ -158,8 +159,9 @@ struct ContentView: View {
                         .font(.headline)
                     
                     TimelineView(.periodic(from: .now, by: 1)) { context in
-                        let elapsed = context.date.timeIntervalSince(startTime)
-                        let recoveredHealth = healthForRecovery(elapsed)
+                        let startTime = Date(timeIntervalSince1970: recoveryStartTime)
+                            let elapsed = context.date.timeIntervalSince(startTime)
+                            let recoveredHealth = healthForRecovery(elapsed)
 
                         VStack(spacing: 10) {
                             
@@ -184,7 +186,7 @@ struct ContentView: View {
                     
                     Button("I'm Back") {
                         health = currentHealth
-                        recoveryStartTime = nil
+                        recoveryStartTime = 0
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -202,12 +204,13 @@ struct ContentView: View {
         ) { date in
             currentDate = date
             
-            if let startTime = recoveryStartTime {
+            if recoveryStartTime > 0 {
+                let startTime = Date(timeIntervalSince1970: recoveryStartTime)
                 let elapsed = date.timeIntervalSince(startTime)
                 
                 if healthForRecovery(elapsed) >= 100 {
                     health = 100
-                    recoveryStartTime = nil
+                    recoveryStartTime = 0
                 }
             }
         }
