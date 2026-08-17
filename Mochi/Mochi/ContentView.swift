@@ -15,6 +15,7 @@ struct ContentView: View {
     @AppStorage("recoveryStartTime") private var recoveryStartTime: Double = 0
     @AppStorage("dailyUsageSeconds") private var dailyUsageSeconds: Double = 0
     @AppStorage("dailyUsageDate") private var dailyUsageDate = ""
+    @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 2 * 60 * 60
     @State private var currentDate = Date()
     @State private var testingMode = true
     @State private var petScale = 1.0
@@ -237,13 +238,21 @@ struct ContentView: View {
                 }
                 
                 ProgressView(
-                    value: min(todayUsage / (2 * 60 * 60), 1.0)
+                    value: min(todayUsage / dailyGoalSeconds, 1.0)
                 )
                 .tint(.orange)
                 
-                Text("Goal: 2 hours")
+                Text("Goal: \(formatUsage(dailyGoalSeconds))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                
+                Picker("Daily Goal", selection: $dailyGoalSeconds) {
+                    Text("1 hour").tag(1 * 60 * 60.0)
+                    Text("2 hours").tag(2 * 60 * 60.0)
+                    Text("3 hours").tag(3 * 60 * 60.0)
+                    Text("4 hours").tag(4 * 60 * 60.0)
+                }
+                .pickerStyle(.menu)
             }
             .padding()
             .background(.thinMaterial)
