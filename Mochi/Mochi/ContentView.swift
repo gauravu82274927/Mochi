@@ -13,8 +13,11 @@ struct ContentView: View {
     @AppStorage("mochiHealth") private var health = 100
     @AppStorage("sessionStartTime") private var sessionStartTime: Double = 0
     @AppStorage("recoveryStartTime") private var recoveryStartTime: Double = 0
+    @AppStorage("dailyUsageSeconds") private var dailyUsageSeconds: Double = 0
+    @AppStorage("dailyUsageDate") private var dailyUsageDate = ""
     @State private var currentDate = Date()
     @State private var testingMode = true
+    @State private var petScale = 1.0
     
     private var currentHealth: Int {
         if sessionStartTime > 0 {
@@ -30,6 +33,15 @@ struct ContentView: View {
         }
         
         return health
+    }
+    
+    private var todayUsage: TimeInterval {
+        if sessionStartTime > 0 {
+            let startTime = Date(timeIntervalSince1970: sessionStartTime)
+            return dailyUsageSeconds + currentDate.timeIntervalSince(startTime)
+        }
+        
+        return dailyUsageSeconds
     }
     
     private var petMood: String {
@@ -119,6 +131,30 @@ struct ContentView: View {
         return String(format: "%02d:%02d:%02d", hours, minutes, remainingSeconds)
     }
     
+    private func formatUsage(_ seconds: TimeInterval) -> String {
+        let totalMinutes = Int(seconds) / 60
+        
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
+    private func resetUsageIfNewDay() {
+        let today = Calendar.current
+            .startOfDay(for: Date())
+            .timeIntervalSince1970
+        
+        if dailyUsageDate != String(today) {
+            dailyUsageSeconds = 0
+            dailyUsageDate = String(today)
+        }
+    }
+    
     private func healthForElapsedTime(_ seconds: TimeInterval) -> Int {
         if testingMode {
             if seconds < 10 {
@@ -163,13 +199,56 @@ struct ContentView: View {
             
             Text(petEmoji)
                 .font(.system(size: 150))
+                .scaleEffect(petScale)
+                .animation(
+                    .easeInOut(duration: 1.5)
+                    .repeatForever(autoreverses: true),
+                    value: petScale
+                )
+                .onAppear {
+                    petScale = 1.05
+                }
             
-            Text("❤️ \(currentHealth) / 100")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            ProgressView(value: Double(currentHealth) / 100.0)
-                .padding(.horizontal, 40)
+            VStack(spacing: 12) {
+                
+                HStack {
+                    Text("Health")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Text("❤️ \(currentHealth)/100")
+                        .font(.headline)
+                }
+                
+                ProgressView(value: Double(currentHealth) / 100.0)
+                    .tint(.pink)
+            }
+            VStack(spacing: 10) {
+                
+                HStack {
+                    Text("Today's Usage")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Text(formatUsage(todayUsage))
+                        .font(.headline)
+                }
+                
+                ProgressView(
+                    value: min(todayUsage / (2 * 60 * 60), 1.0)
+                )
+                .tint(.orange)
+                
+                Text("Goal: 2 hours")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(.thinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .padding(.horizontal)
             
             Text(petMood)
                 .font(.headline)
@@ -201,6 +280,11 @@ struct ContentView: View {
                     
                     Button("I'm Putting My Phone Down") {
                         cancelBreakNotification()
+                        
+                        let startTime = Date(timeIntervalSince1970: sessionStartTime)
+                        let sessionDuration = Date().timeIntervalSince(startTime)
+                        
+                        dailyUsageSeconds += sessionDuration
                         
                         health = currentHealth
                         sessionStartTime = 0
@@ -273,6 +357,9 @@ struct ContentView: View {
             }
         }
         .padding()
+        .onAppear{
+            resetUsageIfNewDay()
+        }
     }
 }
 
