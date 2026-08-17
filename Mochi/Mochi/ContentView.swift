@@ -34,6 +34,10 @@ struct ContentView: View {
         }
     }
     
+    private func changeHealth(by amount: Int) {
+        health = min(100, max(0, health + amount))
+    }
+    
     var body: some View {
         VStack(spacing: 25) {
             
@@ -60,11 +64,11 @@ struct ContentView: View {
             HStack(spacing: 20) {
                 
                 Button("Use Phone") {
-                    health = max(0, health - 10)
+                    changeHealth(by: -10)
                 }
                 
                 Button("Take Break") {
-                    health = min(100, health + 10)
+                    changeHealth(by: +10)
                 }
             }
         }
