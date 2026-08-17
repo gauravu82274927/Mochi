@@ -72,6 +72,31 @@ struct ContentView: View {
         }
     }
     
+    private var petAnimationDuration: Double {
+        if currentHealth >= 80 {
+            return 1.5
+        } else if currentHealth >= 50 {
+            return 2.0
+        } else if currentHealth >= 20 {
+            return 2.8
+        } else {
+            return 4.0
+        }
+    }
+    
+    private func startPetAnimation() {
+        petScale = 1.0
+        petOffset = 0
+        
+        withAnimation(
+            .easeInOut(duration: petAnimationDuration)
+            .repeatForever(autoreverses: true)
+        ) {
+            petScale = 1.05
+            petOffset = -8
+        }
+    }
+    
     private func changeHealth(by amount: Int) {
         health = min(100, max(0, health + amount))
     }
@@ -288,13 +313,10 @@ struct ContentView: View {
                 .scaleEffect(petScale)
                 .offset(y: petOffset)
                 .onAppear {
-                    withAnimation(
-                        .easeInOut(duration: 2.0)
-                        .repeatForever(autoreverses: true)
-                    ) {
-                        petScale = 1.05
-                        petOffset = -8
-                    }
+                    startPetAnimation()
+                }
+                .onChange(of: currentHealth) {
+                    startPetAnimation()
                 }
             
             VStack(spacing: 12) {
