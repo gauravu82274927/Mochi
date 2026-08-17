@@ -9,7 +9,7 @@ import SwiftUI
 import Combine
 
 struct ContentView: View {
-    @State private var health = 100
+    @AppStorage("mochiHealth") private var health = 100
     @State private var sessionStartTime: Date? = nil
     @State private var recoveryStartTime: Date? = nil
     @State private var currentDate = Date()
