@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var health = 100
+    @State private var sessionStartTime: Date? = nil
     
     private var petMood: String {
         if health >= 80 {
@@ -38,6 +39,10 @@ struct ContentView: View {
         health = min(100, max(0, health + amount))
     }
     
+    private func startSession() {
+        sessionStartTime = Date()
+    }
+    
     var body: some View {
         VStack(spacing: 25) {
             
@@ -61,15 +66,11 @@ struct ContentView: View {
             Text(petMood)
                 .font(.headline)
             
-            HStack(spacing: 20) {
-                
-                Button("Use Phone") {
-                    changeHealth(by: -10)
+            if sessionStartTime == nil {
+                Button("Start Using Phone") {
+                    startSession()
                 }
-                
-                Button("Take Break") {
-                    changeHealth(by: +10)
-                }
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding()
