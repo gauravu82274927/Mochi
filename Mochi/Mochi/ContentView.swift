@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import UserNotifications
 
 struct ContentView: View {
     @AppStorage("mochiHealth") private var health = 100
@@ -60,6 +61,51 @@ struct ContentView: View {
     
     private func startSession() {
         sessionStartTime = Date()
+        requestNotificationPermission()
+    }
+    
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(
+            options: [.alert, .sound]
+        ) { granted, error in
+            
+            if let error = error {
+                print("Notification permission error: \(error)")
+                return
+            }
+            
+            if granted {
+                scheduleBreakNotification()
+            }
+        }
+    }
+
+    private func scheduleBreakNotification() {
+        let content = UNMutableNotificationContent()
+        
+        content.title = "🐣 Mochi needs you!"
+        content.body = "You've been using your phone for a while. Give Mochi a break? 🥺"
+        content.sound = .default
+        
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: 10,
+            repeats: false
+        )
+        
+        let request = UNNotificationRequest(
+            identifier: "mochi.breakReminder",
+            content: content,
+            trigger: trigger
+        )
+        
+        UNUserNotificationCenter.current().add(request)
+    }
+    
+    private func cancelBreakNotification() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(
+                withIdentifiers: ["mochi.breakReminder"]
+            )
     }
     
     private func formatTime(_ seconds: TimeInterval) -> String {
@@ -152,6 +198,8 @@ struct ContentView: View {
                     }
                     
                     Button("I'm Putting My Phone Down") {
+                        cancelBreakNotification()
+                        
                         health = currentHealth
                         sessionStartTime = nil
                         recoveryStartTime = Date().timeIntervalSince1970
