@@ -11,6 +11,7 @@ import Combine
 struct ContentView: View {
     @State private var health = 100
     @State private var sessionStartTime: Date? = nil
+    @State private var recoveryStartTime: Date? = nil
     @State private var currentDate = Date()
     
     private var currentHealth: Int {
@@ -19,15 +20,20 @@ struct ContentView: View {
             return healthForElapsedTime(elapsed)
         }
         
+        if let startTime = recoveryStartTime {
+            let elapsed = currentDate.timeIntervalSince(startTime)
+            return healthForRecovery(elapsed)
+        }
+        
         return health
     }
     
     private var petMood: String {
-        if health >= 80 {
+        if currentHealth >= 80 {
             return "Mochi is feeling great! 😊"
-        } else if health >= 50 {
+        } else if currentHealth >= 50 {
             return "Mochi is feeling okay 🙂"
-        } else if health >= 20 {
+        } else if currentHealth >= 20 {
             return "Mochi is getting tired 😟"
         } else {
             return "Mochi needs a break! 😭"
@@ -35,11 +41,11 @@ struct ContentView: View {
     }
     
     private var petEmoji: String {
-        if health >= 80 {
+        if currentHealth >= 80 {
             return "🐣"
-        } else if health >= 50 {
+        } else if currentHealth >= 50 {
             return "🐥"
-        } else if health >= 20 {
+        } else if currentHealth >= 20 {
             return "🥺"
         } else {
             return "😭"
@@ -83,6 +89,12 @@ struct ContentView: View {
         }
     }
     
+    private func healthForRecovery(_ seconds: TimeInterval) -> Int {
+        let recoveryPoints = Int(seconds / 10) * 5
+        
+        return min(100, health + recoveryPoints)
+    }
+    
     var body: some View {
         VStack(spacing: 25) {
             
@@ -107,6 +119,7 @@ struct ContentView: View {
                 .font(.headline)
             
             if let startTime = sessionStartTime {
+                
                 VStack(spacing: 10) {
                     
                     Text("📱 Using Phone")
@@ -114,27 +127,70 @@ struct ContentView: View {
                     
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         let elapsed = context.date.timeIntervalSince(startTime)
-                        let currentHealth = healthForElapsedTime(elapsed)
-
+                        let sessionHealth = healthForElapsedTime(elapsed)
+                        
                         VStack(spacing: 10) {
+                            
                             Text(formatTime(elapsed))
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .monospacedDigit()
-
-                            Text("❤️ \(currentHealth) / 100")
+                            
+                            Text("❤️ \(sessionHealth) / 100")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                         }
                     }
                     
                     Button("I'm Putting My Phone Down") {
+                        health = currentHealth
                         sessionStartTime = nil
+                        recoveryStartTime = Date()
                     }
                     .buttonStyle(.borderedProminent)
-                    
                 }
+                
+            } else if let startTime = recoveryStartTime {
+                
+                VStack(spacing: 10) {
+                    
+                    Text("🌱 Recovery Mode")
+                        .font(.headline)
+                    
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let elapsed = context.date.timeIntervalSince(startTime)
+                        let recoveredHealth = healthForRecovery(elapsed)
+
+                        VStack(spacing: 10) {
+                            
+                            Text(formatTime(elapsed))
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .monospacedDigit()
+                            
+                            Text("❤️ \(recoveredHealth) / 100")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            if recoveredHealth >= 100 {
+                                Text("Mochi is fully recovered! 🥹✨")
+                                    .font(.headline)
+                            } else {
+                                Text("Mochi is recovering! 🥹")
+                                    .font(.headline)
+                            }
+                        }
+                    }
+                    
+                    Button("I'm Back") {
+                        health = currentHealth
+                        recoveryStartTime = nil
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                
             } else {
+                
                 Button("Start Using Phone") {
                     startSession()
                 }
@@ -145,6 +201,15 @@ struct ContentView: View {
             Timer.publish(every: 1, on: .main, in: .common).autoconnect()
         ) { date in
             currentDate = date
+            
+            if let startTime = recoveryStartTime {
+                let elapsed = date.timeIntervalSince(startTime)
+                
+                if healthForRecovery(elapsed) >= 100 {
+                    health = 100
+                    recoveryStartTime = nil
+                }
+            }
         }
         .padding()
     }
