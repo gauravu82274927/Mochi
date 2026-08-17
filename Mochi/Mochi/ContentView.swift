@@ -84,6 +84,7 @@ struct ContentView: View {
         }
     }
     
+    
     private func startPetAnimation() {
         petScale = 1.0
         petOffset = 0
@@ -102,6 +103,8 @@ struct ContentView: View {
     }
     
     private func startSession() {
+        cancelBreakNotifications()
+        
         sessionStartTime = Date().timeIntervalSince1970
         requestNotificationPermission()
     }
