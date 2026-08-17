@@ -426,10 +426,16 @@ struct ContentView: View {
                                 .fontWeight(.semibold)
                             
                             if recoveredHealth >= 100 {
-                                Text("Mochi is fully recovered! 🥹✨")
+                                Text("Mochi is fully recovered! 🎉🐣")
+                                    .font(.headline)
+                            } else if recoveredHealth >= 75 {
+                                Text("Mochi feels so much better! 🥰")
+                                    .font(.headline)
+                            } else if recoveredHealth >= 50 {
+                                Text("You're doing great! Keep resting. 🌱")
                                     .font(.headline)
                             } else {
-                                Text("Mochi is recovering! 🥹")
+                                Text("Thank you for putting your phone down! 🥹")
                                     .font(.headline)
                             }
                         }
