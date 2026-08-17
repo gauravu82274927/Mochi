@@ -9,6 +9,11 @@ import SwiftUI
 import Combine
 import UserNotifications
 
+struct DayResult: Codable {
+    let date: String
+    let achieved: Bool
+}
+
 struct ContentView: View {
     @AppStorage("mochiHealth") private var health = 100
     @AppStorage("sessionStartTime") private var sessionStartTime: Double = 0
@@ -19,6 +24,7 @@ struct ContentView: View {
     @AppStorage("streakCount") private var streakCount = 0
     @AppStorage("streakLastDate") private var streakLastDate = ""
     @AppStorage("sessionStartHealth") private var sessionStartHealth = 100
+    @AppStorage("dayResults") private var dayResultsData: Data = Data()
     @State private var currentDate = Date()
     @State private var testingMode = true
     @State private var petScale = 1.0
@@ -229,6 +235,33 @@ struct ContentView: View {
         }
     }
     
+    private func saveDayResult(date: String, achieved: Bool) {
+        var results = loadDayResults()
+        
+        results.removeAll { $0.date == date }
+        results.append(
+            DayResult(
+                date: date,
+                achieved: achieved
+            )
+        )
+        
+        if let data = try? JSONEncoder().encode(results) {
+            dayResultsData = data
+        }
+    }
+
+    private func loadDayResults() -> [DayResult] {
+        guard !dayResultsData.isEmpty else {
+            return []
+        }
+        
+        return (try? JSONDecoder().decode(
+            [DayResult].self,
+            from: dayResultsData
+        )) ?? []
+    }
+    
     private func resetUsageIfNewDay() {
         let calendar = Calendar.current
         
@@ -245,23 +278,30 @@ struct ContentView: View {
             return
         }
         
-        if dailyUsageSeconds <= dailyGoalSeconds {
+        let previousDayAchieved = dailyUsageSeconds <= dailyGoalSeconds
+
+        saveDayResult(
+            date: dailyUsageDate,
+            achieved: previousDayAchieved
+        )
+
+        if previousDayAchieved {
             let previousDate = Date(
                 timeIntervalSince1970: Double(dailyUsageDate) ?? 0
             )
-            
+
             let yesterday = calendar.date(
                 byAdding: .day,
                 value: -1,
                 to: today
             )!
-            
+
             if calendar.isDate(previousDate, inSameDayAs: yesterday) {
                 streakCount += 1
             } else {
                 streakCount = 1
             }
-            
+
             streakLastDate = dailyUsageDate
         } else {
             streakCount = 0
@@ -309,238 +349,257 @@ struct ContentView: View {
     }
     
     var body: some View {
-        ZStack {
-            Color.black
-                .ignoresSafeArea()
-            
-            VStack(spacing: 14) {
+        NavigationStack{
+            ZStack {
+                Color.black
+                    .ignoresSafeArea()
                 
-                
-                Text("Mochi")
-                    .font(.system(size: 32, weight: .bold))
-                
-                Text("Your screen-time pet")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 8)
-            
-                
-                ZStack {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    .yellow.opacity(
-                                        currentHealth >= 50 ? 0.18 : 0.08
-                                    ),
-                                    .clear
-                                ],
-                                center: .center,
-                                startRadius: 10,
-                                endRadius: 100
-                            )
-                        )
-                        .frame(width: 190, height: 190)
+                VStack(spacing: 14) {
                     
-                    Text(petEmoji)
-                        .font(.system(size: 135))
-                        .scaleEffect(petScale)
-                        .offset(y: petOffset)
-                        .shadow(
-                            color: .yellow.opacity(0.15),
-                            radius: 15
-                        )
-                        .onAppear {
-                            startPetAnimation()
-                        }
-                        .onChange(of: currentHealth) {
-                            startPetAnimation()
-                        }
-                }
-                .frame(height: 180)
-                
-                
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("Health")
-                            .font(.headline)
-                        
-                        Spacer()
-                        
-                        Text("❤️ \(currentHealth)/100")
-                            .font(.headline)
-                    }
                     
-                    ProgressView(
-                        value: Double(currentHealth) / 100.0
-                    )
-                    .tint(.pink)
-                }
-                .mochiCard()
-                
-                
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("Today's Usage")
-                            .font(.headline)
-                        
-                        Spacer()
-                        
-                        Text(formatUsage(todayUsage))
-                            .font(.headline)
-                    }
-                    
-                    ProgressView(
-                        value: min(
-                            todayUsage / dailyGoalSeconds,
-                            1.0
-                        )
-                    )
-                    .tint(.orange)
-                    
-                    HStack {
-                        Text("Goal: \(formatUsage(dailyGoalSeconds))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        
-                        Spacer()
-                        
-                        Picker("Daily Goal", selection: $dailyGoalSeconds) {
-                            Text("1 hour").tag(1 * 60 * 60.0)
-                            Text("2 hours").tag(2 * 60 * 60.0)
-                            Text("3 hours").tag(3 * 60 * 60.0)
-                            Text("4 hours").tag(4 * 60 * 60.0)
-                        }
-                        .pickerStyle(.menu)
-                    }
-                }
-                .mochiCard()
-                
-                
-                VStack(spacing: 5) {
-                    Text("🔥 \(streakCount) Day Streak")
-                        .font(.headline)
+                    ZStack {
+                        Text("Mochi")
+                            .font(.system(size: 32, weight: .bold))
 
-                    Text(
-                        streakCount == 0
-                        ? "Stay under your goal!"
-                        : "Keep it going! 🔥"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                .mochiCard()
-                
-                
-                Text(petMood)
-                    .font(.headline)
-                    .lineLimit(1)
-                
-                
-                if sessionStartTime > 0 {
+                        HStack {
+                            Spacer()
+
+                            NavigationLink {
+                                CalendarView()
+                            } label: {
+                                Image(systemName: "calendar")
+                                    .font(.title3)
+                                    .foregroundStyle(.white)
+                                    .padding(10)
+                                    .background(.white.opacity(0.08))
+                                    .clipShape(Circle())
+                            }
+                        }
+                    }
                     
-                    VStack(spacing: 6) {
-                        Text("📱 Using Phone")
+                    Text("Your screen-time pet")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom, 8)
+                    
+                    
+                    ZStack {
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        .yellow.opacity(
+                                            currentHealth >= 50 ? 0.18 : 0.08
+                                        ),
+                                        .clear
+                                    ],
+                                    center: .center,
+                                    startRadius: 10,
+                                    endRadius: 100
+                                )
+                            )
+                            .frame(width: 190, height: 190)
+                        
+                        Text(petEmoji)
+                            .font(.system(size: 135))
+                            .scaleEffect(petScale)
+                            .offset(y: petOffset)
+                            .shadow(
+                                color: .yellow.opacity(0.15),
+                                radius: 15
+                            )
+                            .onAppear {
+                                startPetAnimation()
+                            }
+                            .onChange(of: currentHealth) {
+                                startPetAnimation()
+                            }
+                    }
+                    .frame(height: 180)
+                    
+                    
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("Health")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            Text("❤️ \(currentHealth)/100")
+                                .font(.headline)
+                        }
+                        
+                        ProgressView(
+                            value: Double(currentHealth) / 100.0
+                        )
+                        .tint(.pink)
+                    }
+                    .mochiCard()
+                    
+                    
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("Today's Usage")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            Text(formatUsage(todayUsage))
+                                .font(.headline)
+                        }
+                        
+                        ProgressView(
+                            value: min(
+                                todayUsage / dailyGoalSeconds,
+                                1.0
+                            )
+                        )
+                        .tint(.orange)
+                        
+                        HStack {
+                            Text("Goal: \(formatUsage(dailyGoalSeconds))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                            Spacer()
+                            
+                            Picker("Daily Goal", selection: $dailyGoalSeconds) {
+                                Text("1 hour").tag(1 * 60 * 60.0)
+                                Text("2 hours").tag(2 * 60 * 60.0)
+                                Text("3 hours").tag(3 * 60 * 60.0)
+                                Text("4 hours").tag(4 * 60 * 60.0)
+                            }
+                            .pickerStyle(.menu)
+                        }
+                    }
+                    .mochiCard()
+                    
+                    
+                    VStack(spacing: 5) {
+                        Text("🔥 \(streakCount) Day Streak")
                             .font(.headline)
                         
-                        TimelineView(
-                            .periodic(from: .now, by: 1)
-                        ) { context in
+                        Text(
+                            streakCount == 0
+                            ? "Stay under your goal!"
+                            : "Keep it going! 🔥"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                    .mochiCard()
+                    
+                    
+                    Text(petMood)
+                        .font(.headline)
+                        .lineLimit(1)
+                    
+                    
+                    if sessionStartTime > 0 {
+                        
+                        VStack(spacing: 6) {
+                            Text("📱 Using Phone")
+                                .font(.headline)
                             
-                            let startTime = Date(
-                                timeIntervalSince1970: sessionStartTime
-                            )
-                            
-                            let elapsed =
+                            TimelineView(
+                                .periodic(from: .now, by: 1)
+                            ) { context in
+                                
+                                let startTime = Date(
+                                    timeIntervalSince1970: sessionStartTime
+                                )
+                                
+                                let elapsed =
                                 context.date.timeIntervalSince(startTime)
-                            
-                            let sessionHealth =
+                                
+                                let sessionHealth =
                                 healthForElapsedTime(elapsed)
-                            
-                            HStack(spacing: 20) {
-                                Text(formatTime(elapsed))
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .monospacedDigit()
                                 
-                                Text("❤️ \(sessionHealth)/100")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
+                                HStack(spacing: 20) {
+                                    Text(formatTime(elapsed))
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .monospacedDigit()
+                                    
+                                    Text("❤️ \(sessionHealth)/100")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                }
                             }
-                        }
-                        
-                        Button("I'm Putting My Phone Down") {
-                            cancelBreakNotifications()
                             
-                            let startTime = Date(
-                                timeIntervalSince1970: sessionStartTime
-                            )
-                            
-                            let sessionDuration =
+                            Button("I'm Putting My Phone Down") {
+                                cancelBreakNotifications()
+                                
+                                let startTime = Date(
+                                    timeIntervalSince1970: sessionStartTime
+                                )
+                                
+                                let sessionDuration =
                                 Date().timeIntervalSince(startTime)
-                            
-                            dailyUsageSeconds += sessionDuration
-                            
-                            health = currentHealth
-                            sessionStartTime = 0
-                            recoveryStartTime =
-                                Date().timeIntervalSince1970
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    
-                } else if recoveryStartTime > 0 {
-                    
-                    VStack(spacing: 6) {
-                        Text("🌱 Recovery Mode")
-                            .font(.headline)
-                        
-                        TimelineView(
-                            .periodic(from: .now, by: 1)
-                        ) { context in
-                            
-                            let startTime = Date(
-                                timeIntervalSince1970: recoveryStartTime
-                            )
-                            
-                            let elapsed =
-                                context.date.timeIntervalSince(startTime)
-                            
-                            let recoveredHealth =
-                                healthForRecovery(elapsed)
-                            
-                            HStack(spacing: 20) {
-                                Text(formatTime(elapsed))
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .monospacedDigit()
                                 
-                                Text("❤️ \(recoveredHealth)/100")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
+                                dailyUsageSeconds += sessionDuration
+                                
+                                health = currentHealth
+                                sessionStartTime = 0
+                                recoveryStartTime =
+                                Date().timeIntervalSince1970
                             }
+                            .buttonStyle(.borderedProminent)
                         }
                         
-                        Button("I'm Back") {
-                            health = currentHealth
-                            recoveryStartTime = 0
+                    } else if recoveryStartTime > 0 {
+                        
+                        VStack(spacing: 6) {
+                            Text("🌱 Recovery Mode")
+                                .font(.headline)
+                            
+                            TimelineView(
+                                .periodic(from: .now, by: 1)
+                            ) { context in
+                                
+                                let startTime = Date(
+                                    timeIntervalSince1970: recoveryStartTime
+                                )
+                                
+                                let elapsed =
+                                context.date.timeIntervalSince(startTime)
+                                
+                                let recoveredHealth =
+                                healthForRecovery(elapsed)
+                                
+                                HStack(spacing: 20) {
+                                    Text(formatTime(elapsed))
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .monospacedDigit()
+                                    
+                                    Text("❤️ \(recoveredHealth)/100")
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                            
+                            Button("I'm Back") {
+                                health = currentHealth
+                                recoveryStartTime = 0
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        
+                    } else {
+                        
+                        Button("Start Using Phone") {
+                            startSession()
                         }
                         .buttonStyle(.borderedProminent)
                     }
-                    
-                } else {
-                    
-                    Button("Start Using Phone") {
-                        startSession()
-                    }
-                    .buttonStyle(.borderedProminent)
                 }
+                .padding(.horizontal, 8)
+                .padding(.top, 4)
+                .padding(.bottom, 8)
+                .frame(maxWidth: .infinity)
+                .foregroundStyle(.white)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
-            .padding(.bottom, 8)
-            .frame(maxWidth: .infinity)
-            .foregroundStyle(.white)
         }
         .onReceive(
             Timer.publish(
@@ -586,6 +645,212 @@ struct MochiCardModifier: ViewModifier {
 extension View {
     func mochiCard() -> some View {
         modifier(MochiCardModifier())
+    }
+}
+
+struct CalendarView: View {
+    
+    @AppStorage("dayResults") private var dayResultsData: Data = Data()
+    
+    @State private var displayedMonth = Date()
+    
+    private let calendar = Calendar.current
+    
+    private var dayResults: [DayResult] {
+        guard !dayResultsData.isEmpty else {
+            return []
+        }
+        
+        return (try? JSONDecoder().decode(
+            [DayResult].self,
+            from: dayResultsData
+        )) ?? []
+    }
+    
+    private var monthTitle: String {
+        displayedMonth.formatted(
+            .dateTime
+                .month(.wide)
+                .year()
+        )
+    }
+    
+    private var daysInMonth: [Date] {
+        guard let range = calendar.range(
+            of: .day,
+            in: .month,
+            for: displayedMonth
+        ) else {
+            return []
+        }
+        
+        return range.compactMap { day in
+            calendar.date(
+                bySetting: .day,
+                value: day,
+                of: displayedMonth
+            )
+        }
+    }
+    
+    private var firstWeekdayOffset: Int {
+        let firstDay = calendar.date(
+            from: calendar.dateComponents(
+                [.year, .month],
+                from: displayedMonth
+            )
+        )!
+        
+        let weekday = calendar.component(
+            .weekday,
+            from: firstDay
+        )
+        
+        return (weekday - calendar.firstWeekday + 7)
+            % 7
+    }
+    
+    private func result(for date: Date) -> Bool? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        let dateString = formatter.string(from: date)
+        
+        return dayResults.first {
+            $0.date == dateString
+        }?.achieved
+    }
+    
+    private func isToday(_ date: Date) -> Bool {
+        calendar.isDateInToday(date)
+    }
+    
+    var body: some View {
+        ZStack {
+            Color.black
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                
+                HStack {
+                    Button {
+                        displayedMonth = calendar.date(
+                            byAdding: .month,
+                            value: -1,
+                            to: displayedMonth
+                        ) ?? displayedMonth
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.title3)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(monthTitle)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Spacer()
+                    
+                    Button {
+                        displayedMonth = calendar.date(
+                            byAdding: .month,
+                            value: 1,
+                            to: displayedMonth
+                        ) ?? displayedMonth
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.title3)
+                    }
+                }
+                .padding(.horizontal)
+                
+                let weekdays = calendar.shortStandaloneWeekdaySymbols
+                
+                LazyVGrid(
+                    columns: Array(
+                        repeating: GridItem(.flexible()),
+                        count: 7
+                    )
+                ) {
+                    ForEach(
+                        Array(weekdays.enumerated()),
+                        id: \.offset
+                    ) { _, weekday in
+                        Text(weekday)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.horizontal)
+                
+                LazyVGrid(
+                    columns: Array(
+                        repeating: GridItem(.flexible()),
+                        count: 7
+                    ),
+                    spacing: 12
+                ) {
+                    
+                    ForEach(
+                        0..<firstWeekdayOffset,
+                        id: \.self
+                    ) { _ in
+                        Color.clear
+                            .frame(height: 42)
+                    }
+                    
+                    ForEach(daysInMonth, id: \.self) { date in
+                        
+                        let result = result(for: date)
+                        
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    result == true
+                                    ? Color.green.opacity(0.25)
+                                    : result == false
+                                    ? Color.red.opacity(0.25)
+                                    : Color.white.opacity(0.05)
+                                )
+                            
+                            Text("\(calendar.component(.day, from: date))")
+                                .foregroundStyle(.white)
+                                .foregroundStyle(.white)
+                            
+                            if result == true {
+                                Image(systemName: "checkmark")
+                                    .font(.caption2)
+                                    .foregroundStyle(.green)
+                                    .offset(x: 14, y: -14)
+                            } else if result == false {
+                                Image(systemName: "xmark")
+                                    .font(.caption2)
+                                    .foregroundStyle(.red)
+                                    .offset(x: 14, y: -14)
+                            }
+                        }
+                        .frame(height: 42)
+                        .overlay {
+                            if isToday(date) {
+                                Circle()
+                                    .stroke(
+                                        .white.opacity(0.8),
+                                        lineWidth: 1.5
+                                    )
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+            }
+            .foregroundStyle(.white)
+            .padding(.top)
+        }
+        .navigationTitle("Calendar")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
