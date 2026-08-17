@@ -11,13 +11,14 @@ import UserNotifications
 
 struct ContentView: View {
     @AppStorage("mochiHealth") private var health = 100
-    @State private var sessionStartTime: Date? = nil
+    @AppStorage("sessionStartTime") private var sessionStartTime: Double = 0
     @AppStorage("recoveryStartTime") private var recoveryStartTime: Double = 0
     @State private var currentDate = Date()
     @State private var testingMode = true
     
     private var currentHealth: Int {
-        if let startTime = sessionStartTime {
+        if sessionStartTime > 0 {
+            let startTime = Date(timeIntervalSince1970: sessionStartTime)
             let elapsed = currentDate.timeIntervalSince(startTime)
             return healthForElapsedTime(elapsed)
         }
@@ -60,7 +61,7 @@ struct ContentView: View {
     }
     
     private func startSession() {
-        sessionStartTime = Date()
+        sessionStartTime = Date().timeIntervalSince1970
         requestNotificationPermission()
     }
     
@@ -173,7 +174,7 @@ struct ContentView: View {
             Text(petMood)
                 .font(.headline)
             
-            if let startTime = sessionStartTime {
+            if sessionStartTime > 0 {
                 
                 VStack(spacing: 10) {
                     
@@ -181,6 +182,7 @@ struct ContentView: View {
                         .font(.headline)
                     
                     TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let startTime = Date(timeIntervalSince1970: sessionStartTime)
                         let elapsed = context.date.timeIntervalSince(startTime)
                         let sessionHealth = healthForElapsedTime(elapsed)
                         
@@ -201,7 +203,7 @@ struct ContentView: View {
                         cancelBreakNotification()
                         
                         health = currentHealth
-                        sessionStartTime = nil
+                        sessionStartTime = 0
                         recoveryStartTime = Date().timeIntervalSince1970
                     }
                     .buttonStyle(.borderedProminent)
