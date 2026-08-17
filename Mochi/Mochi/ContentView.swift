@@ -43,6 +43,16 @@ struct ContentView: View {
         sessionStartTime = Date()
     }
     
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        let totalSeconds = Int(seconds)
+        
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let remainingSeconds = totalSeconds % 60
+        
+        return String(format: "%02d:%02d:%02d", hours, minutes, remainingSeconds)
+    }
+    
     var body: some View {
         VStack(spacing: 25) {
             
@@ -66,7 +76,28 @@ struct ContentView: View {
             Text(petMood)
                 .font(.headline)
             
-            if sessionStartTime == nil {
+            if let startTime = sessionStartTime {
+                VStack(spacing: 10) {
+                    
+                    Text("📱 Using Phone")
+                        .font(.headline)
+                    
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        let elapsed = context.date.timeIntervalSince(startTime)
+                        
+                        Text(formatTime(elapsed))
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .monospacedDigit()
+                    }
+                    
+                    Button("I'm Putting My Phone Down") {
+                        sessionStartTime = nil
+                    }
+                    .buttonStyle(.borderedProminent)
+                    
+                }
+            } else {
                 Button("Start Using Phone") {
                     startSession()
                 }
