@@ -16,6 +16,8 @@ struct ContentView: View {
     @AppStorage("dailyUsageSeconds") private var dailyUsageSeconds: Double = 0
     @AppStorage("dailyUsageDate") private var dailyUsageDate = ""
     @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 2 * 60 * 60
+    @AppStorage("streakCount") private var streakCount = 0
+    @AppStorage("streakLastDate") private var streakLastDate = ""
     @State private var currentDate = Date()
     @State private var testingMode = true
     @State private var petScale = 1.0
@@ -89,39 +91,89 @@ struct ContentView: View {
             }
             
             if granted {
-                scheduleBreakNotification()
+                scheduleBreakNotifications()
             }
         }
     }
 
-    private func scheduleBreakNotification() {
-        let content = UNMutableNotificationContent()
+    private func scheduleBreakNotifications() {
         
-        content.title = "🐣 Mochi needs you!"
-        content.body = "You've been using your phone for a while. Give Mochi a break? 🥺"
-        content.sound = .default
+        let center = UNUserNotificationCenter.current()
         
-        let trigger = UNTimeIntervalNotificationTrigger(
+        center.removePendingNotificationRequests(
+            withIdentifiers: [
+                "mochi.breakReminder.1",
+                "mochi.breakReminder.2",
+                "mochi.breakReminder.3"
+            ]
+        )
+        
+        let firstContent = UNMutableNotificationContent()
+        firstContent.title = "🐣 Mochi is getting tired"
+        firstContent.body = "I'm okay, but maybe it's time for a little break? 🙂"
+        firstContent.sound = .default
+        
+        let firstTrigger = UNTimeIntervalNotificationTrigger(
             timeInterval: 10,
             repeats: false
         )
         
-        let request = UNNotificationRequest(
-            identifier: "mochi.breakReminder",
-            content: content,
-            trigger: trigger
+        let firstRequest = UNNotificationRequest(
+            identifier: "mochi.breakReminder.1",
+            content: firstContent,
+            trigger: firstTrigger
         )
         
-        UNUserNotificationCenter.current().add(request)
+        center.add(firstRequest)
+        
+        
+        let secondContent = UNMutableNotificationContent()
+        secondContent.title = "🥺 Mochi needs a break"
+        secondContent.body = "My health is getting low. Please put your phone down for a while."
+        secondContent.sound = .default
+        
+        let secondTrigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: 40,
+            repeats: false
+        )
+        
+        let secondRequest = UNNotificationRequest(
+            identifier: "mochi.breakReminder.2",
+            content: secondContent,
+            trigger: secondTrigger
+        )
+        
+        center.add(secondRequest)
+        
+        let finalContent = UNMutableNotificationContent()
+        finalContent.title = "😭 Mochi really needs you"
+        finalContent.body = "I'm exhausted. Please give me a proper break."
+        finalContent.sound = .default
+        
+        let finalTrigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: 60,
+            repeats: false
+        )
+        
+        let finalRequest = UNNotificationRequest(
+            identifier: "mochi.breakReminder.3",
+            content: finalContent,
+            trigger: finalTrigger
+        )
+        
+        center.add(finalRequest)
     }
     
-    private func cancelBreakNotification() {
+    private func cancelBreakNotifications() {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(
-                withIdentifiers: ["mochi.breakReminder"]
+                withIdentifiers: [
+                    "mochi.breakReminder.1",
+                    "mochi.breakReminder.2",
+                    "mochi.breakReminder.3"
+                ]
             )
     }
-    
     private func formatTime(_ seconds: TimeInterval) -> String {
         let totalSeconds = Int(seconds)
         
@@ -146,14 +198,46 @@ struct ContentView: View {
     }
     
     private func resetUsageIfNewDay() {
-        let today = Calendar.current
-            .startOfDay(for: Date())
-            .timeIntervalSince1970
+        let calendar = Calendar.current
         
-        if dailyUsageDate != String(today) {
-            dailyUsageSeconds = 0
-            dailyUsageDate = String(today)
+        let today = calendar.startOfDay(for: Date())
+        let todayTimestamp = today.timeIntervalSince1970
+        let todayString = String(todayTimestamp)
+        
+        if dailyUsageDate.isEmpty {
+            dailyUsageDate = todayString
+            return
         }
+        
+        if dailyUsageDate == todayString {
+            return
+        }
+        
+        if dailyUsageSeconds <= dailyGoalSeconds {
+            let previousDate = Date(
+                timeIntervalSince1970: Double(dailyUsageDate) ?? 0
+            )
+            
+            let yesterday = calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: today
+            )!
+            
+            if calendar.isDate(previousDate, inSameDayAs: yesterday) {
+                streakCount += 1
+            } else {
+                streakCount = 1
+            }
+            
+            streakLastDate = dailyUsageDate
+        } else {
+            streakCount = 0
+            streakLastDate = ""
+        }
+        
+        dailyUsageSeconds = 0
+        dailyUsageDate = todayString
     }
     
     private func healthForElapsedTime(_ seconds: TimeInterval) -> Int {
@@ -254,7 +338,23 @@ struct ContentView: View {
                 }
                 .pickerStyle(.menu)
             }
+            VStack(spacing: 8) {
+                
+                Text("🔥 \(streakCount) Day Streak")
+                    .font(.headline)
+                
+                if streakCount == 0 {
+                    Text("Stay under your goal today!")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Keep it going! 🔥")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
             .padding()
+            .frame(maxWidth: .infinity)
             .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .padding(.horizontal)
@@ -288,7 +388,7 @@ struct ContentView: View {
                     }
                     
                     Button("I'm Putting My Phone Down") {
-                        cancelBreakNotification()
+                        cancelBreakNotifications()
                         
                         let startTime = Date(timeIntervalSince1970: sessionStartTime)
                         let sessionDuration = Date().timeIntervalSince(startTime)
