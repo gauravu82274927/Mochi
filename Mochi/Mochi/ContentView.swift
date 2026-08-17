@@ -22,6 +22,18 @@ struct ContentView: View {
         }
     }
     
+    private var petEmoji: String {
+        if health >= 80 {
+            return "🐣"
+        } else if health >= 50 {
+            return "🐥"
+        } else if health >= 20 {
+            return "🥺"
+        } else {
+            return "😭"
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 25) {
             
@@ -32,7 +44,7 @@ struct ContentView: View {
             Text("Your screen-time pet")
                 .foregroundStyle(.secondary)
             
-            Text("🐣")
+            Text(petEmoji)
                 .font(.system(size: 150))
             
             Text("❤️ \(health) / 100")
