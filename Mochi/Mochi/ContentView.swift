@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var currentDate = Date()
     @State private var testingMode = true
     @State private var petScale = 1.0
+    @State private var petOffset: CGFloat = 0
     
     private var currentHealth: Int {
         if sessionStartTime > 0 {
@@ -283,15 +284,17 @@ struct ContentView: View {
                 .foregroundStyle(.secondary)
             
             Text(petEmoji)
-                .font(.system(size: 150))
+                .font(.system(size: 140))
                 .scaleEffect(petScale)
-                .animation(
-                    .easeInOut(duration: 1.5)
-                    .repeatForever(autoreverses: true),
-                    value: petScale
-                )
+                .offset(y: petOffset)
                 .onAppear {
-                    petScale = 1.05
+                    withAnimation(
+                        .easeInOut(duration: 2.0)
+                        .repeatForever(autoreverses: true)
+                    ) {
+                        petScale = 1.05
+                        petOffset = -8
+                    }
                 }
             
             VStack(spacing: 12) {
