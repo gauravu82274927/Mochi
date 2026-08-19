@@ -320,13 +320,17 @@ struct ContentView: View {
     }
     
     private func healthForElapsedTime(_ seconds: TimeInterval) -> Double {
+        if testingMode {
+            let lossPerSecond = 0.5
+            let healthLoss = seconds * lossPerSecond
 
-        let percentage = max(
-            0,
-            1 - (seconds / dailyGoalSeconds)
-        )
+            return max(0, sessionStartHealth - healthLoss)
+        } else {
+            let threeHours: TimeInterval = 3 * 60 * 60
+            let percentage = max(0, 1 - (seconds / threeHours))
 
-        return (percentage * 100)
+            return max(0, sessionStartHealth * percentage)
+        }
     }
     
     private func healthForRecovery(_ seconds: TimeInterval) -> Double {
@@ -480,13 +484,13 @@ struct ContentView: View {
                     
                     
                     VStack(spacing: 5) {
-                        Text("🔥 \(streakCount) Day Streak")
+                        Text("\(streakCount) Day Streak")
                             .font(.headline)
                         
                         Text(
                             streakCount == 0
                             ? "Stay under your goal!"
-                            : "Keep it going! 🔥"
+                            : "Keep it going!"
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -559,7 +563,7 @@ struct ContentView: View {
                     } else if recoveryStartTime > 0 {
                         
                         VStack(spacing: 6) {
-                            Text("🌱 Recovery Mode")
+                            Text("Recovery Mode")
                                 .font(.headline)
                             
                             TimelineView(
