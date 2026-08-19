@@ -15,7 +15,7 @@ struct DayResult: Codable {
 }
 
 struct ContentView: View {
-    @AppStorage("mochiHealth") private var health = 100
+    @AppStorage("mochiHealth") private var health: Double = 100
     @AppStorage("sessionStartTime") private var sessionStartTime: Double = 0
     @AppStorage("recoveryStartTime") private var recoveryStartTime: Double = 0
     @AppStorage("dailyUsageSeconds") private var dailyUsageSeconds: Double = 0
@@ -23,7 +23,7 @@ struct ContentView: View {
     @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 3 * 60 * 60
     @AppStorage("streakCount") private var streakCount = 0
     @AppStorage("streakLastDate") private var streakLastDate = ""
-    @AppStorage("sessionStartHealth") private var sessionStartHealth = 100
+    @AppStorage("sessionStartHealth") private var sessionStartHealth: Double = 100
     @AppStorage("dayResultsData") private var dayResultsData: Data = Data()
     @AppStorage("isDarkMode") private var isDarkMode = true
     @State private var currentDate = Date()
@@ -31,7 +31,7 @@ struct ContentView: View {
     @State private var petScale = 1.0
     @State private var petOffset: CGFloat = 0
     
-    private var currentHealth: Int {
+    private var currentHealth: Double {
         if sessionStartTime > 0 {
             let startTime = Date(timeIntervalSince1970: sessionStartTime)
             let elapsed = currentDate.timeIntervalSince(startTime)
@@ -94,7 +94,7 @@ struct ContentView: View {
         }
     }
     
-    private func changeHealth(by amount: Int) {
+    private func changeHealth(by amount: Double) {
         health = min(100, max(0, health + amount))
     }
     
@@ -319,19 +319,19 @@ struct ContentView: View {
         dailyUsageDate = todayString
     }
     
-    private func healthForElapsedTime(_ seconds: TimeInterval) -> Int {
+    private func healthForElapsedTime(_ seconds: TimeInterval) -> Double {
 
         let percentage = max(
             0,
             1 - (seconds / dailyGoalSeconds)
         )
 
-        return Int(percentage * 100)
+        return (percentage * 100)
     }
     
-    private func healthForRecovery(_ seconds: TimeInterval) -> Int {
-        let recoveryPoints = Int(seconds / (10 * 60)) * 5
-        return min(100, health + recoveryPoints)
+    private func healthForRecovery(_ seconds: TimeInterval) -> Double {
+        let recoveryPoints = seconds / (10 * 60) * 5
+        return min(100, (health) + recoveryPoints)
     }
     
     var body: some View {
@@ -420,9 +420,6 @@ struct ContentView: View {
                             .onAppear {
                                 startPetAnimation()
                             }
-                            .onChange(of: currentHealth) {
-                                startPetAnimation()
-                            }
                     }
                     .frame(height: 150)
                     
@@ -434,13 +431,11 @@ struct ContentView: View {
                             
                             Spacer()
                             
-                            Text("❤️ \(currentHealth)/100")
+                            Text("❤️ \(currentHealth.formatted(.number.precision(.fractionLength(0...1))))/100")
                                 .font(.headline)
                         }
                         
-                        ProgressView(
-                            value: Double(currentHealth) / 100.0
-                        )
+                        ProgressView(value: min(1.0, max(0.0, currentHealth / 100.0)))
                         .tint(.pink)
                     }
                     .mochiCard()
@@ -530,7 +525,7 @@ struct ContentView: View {
 
                                     Spacer()
 
-                                    Text("❤️ \(sessionHealth)/100")
+                                    Text("❤️ \(sessionHealth.formatted(.number.precision(.fractionLength(0...1))))/100")
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                 }
@@ -587,14 +582,15 @@ struct ContentView: View {
                                         .fontWeight(.bold)
                                         .monospacedDigit()
                                     
-                                    Text("❤️ \(recoveredHealth)/100")
+                                    Text("❤️ \(recoveredHealth.formatted(.number.precision(.fractionLength(0...1))))/100")
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                 }
                             }
                             
                             Button("I'm Back") {
-                                health = currentHealth
+                                let recoveredHealth = currentHealth
+                                health = recoveredHealth
                                 recoveryStartTime = 0
                             }
                             .buttonStyle(.borderedProminent)
