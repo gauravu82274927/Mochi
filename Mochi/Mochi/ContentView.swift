@@ -25,6 +25,7 @@ struct ContentView: View {
     @AppStorage("streakLastDate") private var streakLastDate = ""
     @AppStorage("sessionStartHealth") private var sessionStartHealth = 100
     @AppStorage("dayResultsData") private var dayResultsData: Data = Data()
+    @AppStorage("isDarkMode") private var isDarkMode = true
     @State private var currentDate = Date()
     @State private var testingMode = true
     @State private var petScale = 1.0
@@ -53,18 +54,6 @@ struct ContentView: View {
         }
         
         return dailyUsageSeconds
-    }
-    
-    private var petMood: String {
-        if currentHealth >= 80 {
-            return "Mochi is feeling great! 😊"
-        } else if currentHealth >= 50 {
-            return "Mochi is feeling okay 🙂"
-        } else if currentHealth >= 20 {
-            return "Mochi is getting tired 😟"
-        } else {
-            return "Mochi needs a break! 😭"
-        }
     }
     
     private var petEmoji: String {
@@ -369,12 +358,21 @@ struct ContentView: View {
     var body: some View {
         NavigationStack{
             ZStack {
-                Color.black
+                Color(.systemBackground)
                     .ignoresSafeArea()
                 
+                RadialGradient(
+                    colors: [
+                        Color.yellow.opacity(0.05),
+                        Color.clear
+                    ],
+                    center: .center,
+                    startRadius: 20,
+                    endRadius: 180
+                )
+                .ignoresSafeArea()
+                
                 VStack(spacing: 14) {
-                    
-                    
                     ZStack {
                         Text("Mochi")
                             .font(.system(size: 32, weight: .bold))
@@ -382,15 +380,29 @@ struct ContentView: View {
                         HStack {
                             Spacer()
 
-                            NavigationLink {
-                                CalendarView()
-                            } label: {
-                                Image(systemName: "calendar")
-                                    .font(.title3)
-                                    .foregroundStyle(.white)
-                                    .padding(10)
-                                    .background(.white.opacity(0.08))
-                                    .clipShape(Circle())
+                            HStack(spacing: 8) {
+
+                                Button {
+                                    isDarkMode.toggle()
+                                } label: {
+                                    Image(systemName: isDarkMode ? "sun.max.fill" : "moon.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(.primary)
+                                        .padding(10)
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(Circle())
+                                }
+
+                                NavigationLink {
+                                    CalendarView()
+                                } label: {
+                                    Image(systemName: "calendar")
+                                        .font(.title3)
+                                        .foregroundStyle(.primary)
+                                        .padding(10)
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(Circle())
+                                }
                             }
                         }
                     }
@@ -419,7 +431,7 @@ struct ContentView: View {
                             .frame(width: 190, height: 190)
                         
                         Text(petEmoji)
-                            .font(.system(size: 135))
+                            .font(.system(size: 125))
                             .scaleEffect(petScale)
                             .offset(y: petOffset)
                             .shadow(
@@ -433,7 +445,7 @@ struct ContentView: View {
                                 startPetAnimation()
                             }
                     }
-                    .frame(height: 180)
+                    .frame(height: 150)
                     
                     
                     VStack(spacing: 8) {
@@ -507,64 +519,69 @@ struct ContentView: View {
                     }
                     .mochiCard()
                     
-                    
-                    Text(petMood)
-                        .font(.headline)
-                        .lineLimit(1)
-                    
-                    
                     if sessionStartTime > 0 {
-                        
-                        VStack(spacing: 6) {
-                            Text("📱 Using Phone")
-                                .font(.headline)
-                            
+                        VStack(spacing: 14) {
+
+                            HStack {
+                                Text("📱 Using Phone")
+                                    .font(.headline)
+
+                                Spacer()
+                            }
+
                             TimelineView(
                                 .periodic(from: .now, by: 1)
                             ) { context in
-                                
+
                                 let startTime = Date(
                                     timeIntervalSince1970: sessionStartTime
                                 )
-                                
+
                                 let elapsed =
-                                context.date.timeIntervalSince(startTime)
-                                
+                                    context.date.timeIntervalSince(startTime)
+
                                 let sessionHealth =
-                                healthForElapsedTime(elapsed)
-                                
-                                HStack(spacing: 20) {
+                                    healthForElapsedTime(elapsed)
+
+                                HStack {
                                     Text(formatTime(elapsed))
                                         .font(.title3)
                                         .fontWeight(.bold)
                                         .monospacedDigit()
-                                    
+
+                                    Spacer()
+
                                     Text("❤️ \(sessionHealth)/100")
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                 }
                             }
-                            
+
                             Button("I'm Putting My Phone Down") {
                                 cancelBreakNotifications()
-                                
+
                                 let startTime = Date(
                                     timeIntervalSince1970: sessionStartTime
                                 )
-                                
+
                                 let sessionDuration =
-                                Date().timeIntervalSince(startTime)
-                                
+                                    Date().timeIntervalSince(startTime)
+
                                 dailyUsageSeconds += sessionDuration
-                                
                                 health = currentHealth
                                 sessionStartTime = 0
                                 recoveryStartTime =
-                                Date().timeIntervalSince1970
+                                    Date().timeIntervalSince1970
                             }
                             .buttonStyle(.borderedProminent)
+                            .frame(maxWidth: .infinity)
                         }
-                        
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 22)
+                                .fill(Color(.systemGray6).opacity(0.06))
+                        )
+
                     } else if recoveryStartTime > 0 {
                         
                         VStack(spacing: 6) {
@@ -616,7 +633,7 @@ struct ContentView: View {
                 .padding(.top, 4)
                 .padding(.bottom, 8)
                 .frame(maxWidth: .infinity)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             }
         }
         .onReceive(
@@ -646,20 +663,37 @@ struct ContentView: View {
         .onAppear {
             resetUsageIfNewDay()
         }
+        .preferredColorScheme(isDarkMode ? .dark : .light)
     }
 }
 
 struct MochiCardModifier: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
     func body(content: Content) -> some View {
         content
-            .padding()
+            .padding(16)
             .frame(maxWidth: .infinity)
-            .background(.white.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 22))
-            .padding(.horizontal)
+            .background(
+                Color.primary.opacity(colorScheme == .dark ? 0.08 : 0.045)
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: 20,
+                    style: .continuous
+                )
+            )
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: 20,
+                    style: .continuous
+                )
+                .stroke(
+                    Color.white.opacity(0.08),
+                    lineWidth: 0.8
+                )
+            }
     }
 }
-
 extension View {
     func mochiCard() -> some View {
         modifier(MochiCardModifier())
@@ -759,11 +793,9 @@ struct CalendarView: View {
     
     var body: some View {
         ZStack {
-            Color.black
-                .ignoresSafeArea()
+            Color(uiColor: .systemBackground)                .ignoresSafeArea()
             
             VStack(spacing: 20) {
-                
                 HStack {
                     Button {
                         displayedMonth = calendar.date(
@@ -847,8 +879,7 @@ struct CalendarView: View {
                                 )
                             
                             Text("\(calendar.component(.day, from: date))")
-                                .foregroundStyle(.white)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             
                             if result == true {
                                 Image(systemName: "checkmark")
@@ -878,7 +909,7 @@ struct CalendarView: View {
                 
                 Spacer()
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .padding(.top)
         }
         .navigationTitle("Calendar")
