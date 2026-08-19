@@ -17,9 +17,17 @@ struct ProfileView: View {
 
             // Profile header
             VStack(spacing: 10) {
-                Image(systemName: "person.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.blue)
+                Text(
+                    userName
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .prefix(1)
+                        .uppercased()
+                )
+                .font(.system(size: 55, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 90, height: 90)
+                .background(Color.blue)
+                .clipShape(Circle())
 
                 Text(userName)
                     .font(.title)
