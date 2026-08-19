@@ -28,9 +28,27 @@ struct ContentView: View {
     @AppStorage("isDarkMode") private var isDarkMode = true
     @AppStorage("userName") private var userName = ""
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("secondaryTheme") private var secondaryTheme = "blue"
     @State private var selectedTab = 0
     @State private var currentDate = Date()
     @State private var testingMode = false
+    
+    private var secondaryColor: Color {
+        switch secondaryTheme {
+        case "purple":
+            return .purple
+        case "green":
+            return .green
+        case "orange":
+            return .orange
+        case "pink":
+            return .pink
+        case "red":
+            return .red
+        default:
+            return .blue
+        }
+    }
     
     private var currentHealth: Double {
         if sessionStartTime > 0 {
@@ -360,6 +378,7 @@ struct ContentView: View {
                     }
                     .tag(2)
                 }
+                .tint(secondaryColor)
 
             } else {
 
@@ -588,6 +607,7 @@ struct ContentView: View {
                             startSession()
                         }
                         .buttonStyle(.borderedProminent)
+                        .tint(secondaryColor)
                     }
                 }
                 .padding(.horizontal, 8)

@@ -11,6 +11,28 @@ struct ProfileView: View {
 
     let userName: String
     @Binding var isDarkMode: Bool
+    @AppStorage("secondaryTheme") private var secondaryTheme = "blue"
+    
+    private var secondaryColor: Color {
+        switch secondaryTheme {
+        case "purple":
+            return .purple
+        case "green":
+            return .green
+        case "orange":
+            return .orange
+        case "pink":
+            return .pink
+        case "red":
+            return .red
+        default:
+            return .blue
+        }
+    }
+    
+    private var themeName: String {
+        secondaryTheme.capitalized
+    }
 
     var body: some View {
         VStack(spacing: 25) {
@@ -26,7 +48,7 @@ struct ProfileView: View {
                 .font(.system(size: 55, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 90, height: 90)
-                .background(Color.blue)
+                .background(secondaryColor)
                 .clipShape(Circle())
 
                 Text(userName)
@@ -36,6 +58,7 @@ struct ProfileView: View {
                 Text("Mochi user")
                     .foregroundStyle(.secondary)
             }
+            
 
             Divider()
 
@@ -44,7 +67,7 @@ struct ProfileView: View {
                 Image(systemName: isDarkMode ? "moon.fill" : "sun.max.fill")
                     .frame(width: 30)
 
-                Text("Dark Mode")
+                Text("Primary Theme")
                     .font(.headline)
 
                 Spacer()
@@ -52,8 +75,62 @@ struct ProfileView: View {
                 Toggle("", isOn: $isDarkMode)
                     .labelsHidden()
             }
-            .padding(.horizontal)
+            Menu {
+                Button {
+                    secondaryTheme = "blue"
+                } label: {
+                    Label("Blue", systemImage: secondaryTheme == "blue" ? "checkmark" : "")
+                }
 
+                Button {
+                    secondaryTheme = "purple"
+                } label: {
+                    Label("Purple", systemImage: secondaryTheme == "purple" ? "checkmark" : "")
+                }
+
+                Button {
+                    secondaryTheme = "green"
+                } label: {
+                    Label("Green", systemImage: secondaryTheme == "green" ? "checkmark" : "")
+                }
+
+                Button {
+                    secondaryTheme = "orange"
+                } label: {
+                    Label("Orange", systemImage: secondaryTheme == "orange" ? "checkmark" : "")
+                }
+
+                Button {
+                    secondaryTheme = "pink"
+                } label: {
+                    Label("Pink", systemImage: secondaryTheme == "pink" ? "checkmark" : "")
+                }
+
+                Button {
+                    secondaryTheme = "red"
+                } label: {
+                    Label("Red", systemImage: secondaryTheme == "red" ? "checkmark" : "")
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "paintpalette.fill")
+                        .foregroundStyle(.primary)
+
+                    Text("Secondary Theme")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    Text(themeName)
+                        .foregroundStyle(.secondary)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                }
+            }
+            .foregroundStyle(.primary)
             Spacer()
         }
         .padding()
