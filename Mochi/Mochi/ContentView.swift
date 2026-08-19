@@ -26,10 +26,11 @@ struct ContentView: View {
     @AppStorage("sessionStartHealth") private var sessionStartHealth: Double = 100
     @AppStorage("dayResultsData") private var dayResultsData: Data = Data()
     @AppStorage("isDarkMode") private var isDarkMode = true
+    @AppStorage("userName") private var userName = ""
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @State private var selectedTab = 0
     @State private var currentDate = Date()
     @State private var testingMode = false
-    @State private var petScale = 1.0
-    @State private var petOffset: CGFloat = 0
     
     private var currentHealth: Double {
         if sessionStartTime > 0 {
@@ -77,20 +78,6 @@ struct ContentView: View {
             return 2.8
         } else {
             return 4.0
-        }
-    }
-    
-    
-    private func startPetAnimation() {
-        petScale = 1.0
-        petOffset = 0
-        
-        withAnimation(
-            .easeInOut(duration: petAnimationDuration)
-            .repeatForever(autoreverses: true)
-        ) {
-            petScale = 1.05
-            petOffset = -8
         }
     }
     
@@ -339,7 +326,55 @@ struct ContentView: View {
     }
     
     var body: some View {
-        NavigationStack{
+
+        Group {
+
+            if hasCompletedOnboarding {
+
+                TabView(selection: $selectedTab) {
+
+                    NavigationStack {
+                        homeView
+                    }
+                    .tabItem {
+                        Label("Home", systemImage: "house.fill")
+                    }
+                    .tag(0)
+
+                    NavigationStack {
+                        CalendarView()
+                    }
+                    .tabItem {
+                        Label("Calendar", systemImage: "calendar")
+                    }
+                    .tag(1)
+
+                    NavigationStack {
+                        ProfileView(
+                            userName: userName,
+                            isDarkMode: $isDarkMode
+                        )
+                    }
+                    .tabItem {
+                        Label("Profile", systemImage: "person.fill")
+                    }
+                    .tag(2)
+                }
+
+            } else {
+
+                OnboardingView(
+                    userName: $userName,
+                    isDarkMode: $isDarkMode,
+                    hasCompletedOnboarding: $hasCompletedOnboarding
+                )
+            }
+        }
+        .preferredColorScheme(isDarkMode ? .dark : .light)
+    }
+    
+    @ViewBuilder
+    private var homeView: some View {
             ZStack {
                 Color(.systemBackground)
                     .ignoresSafeArea()
@@ -357,75 +392,22 @@ struct ContentView: View {
                 
                 VStack(spacing: 14) {
                     ZStack {
-                        Text("Mochi")
+                        Text("Hey \(userName)")
                             .font(.system(size: 32, weight: .bold))
 
-                        HStack {
-                            Spacer()
-
-                            HStack(spacing: 8) {
-
-                                Button {
-                                    isDarkMode.toggle()
-                                } label: {
-                                    Image(systemName: isDarkMode ? "sun.max.fill" : "moon.fill")
-                                        .font(.title3)
-                                        .foregroundStyle(.primary)
-                                        .padding(10)
-                                        .background(.ultraThinMaterial)
-                                        .clipShape(Circle())
-                                }
-
-                                NavigationLink {
-                                    CalendarView()
-                                } label: {
-                                    Image(systemName: "calendar")
-                                        .font(.title3)
-                                        .foregroundStyle(.primary)
-                                        .padding(10)
-                                        .background(.ultraThinMaterial)
-                                        .clipShape(Circle())
-                                }
-                            }
-                        }
                     }
                     
-                    Text("Your screen-time pet")
+                    Text("Mochi is your screen-time pet")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .padding(.bottom, 8)
                     
                     
-                    ZStack {
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [
-                                        .yellow.opacity(
-                                            currentHealth >= 50 ? 0.18 : 0.08
-                                        ),
-                                        .clear
-                                    ],
-                                    center: .center,
-                                    startRadius: 10,
-                                    endRadius: 100
-                                )
-                            )
-                            .frame(width: 190, height: 190)
-                        
-                        Text(petEmoji)
-                            .font(.system(size: 125))
-                            .scaleEffect(petScale)
-                            .offset(y: petOffset)
-                            .shadow(
-                                color: .yellow.opacity(0.15),
-                                radius: 15
-                            )
-                            .onAppear {
-                                startPetAnimation()
-                            }
-                    }
-                    .frame(height: 150)
+                    MochiPetView(
+                        emoji: petEmoji,
+                        health: currentHealth
+                    )
+                    .frame(height: 190)
                     
                     
                     VStack(spacing: 8) {
@@ -614,7 +596,6 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
                 .foregroundStyle(.primary)
             }
-        }
         .onReceive(
             Timer.publish(
                 every: 1,
@@ -643,6 +624,69 @@ struct ContentView: View {
             resetUsageIfNewDay()
         }
         .preferredColorScheme(isDarkMode ? .dark : .light)
+    }
+}
+
+struct MochiPetView: View {
+    let emoji: String
+    let health: Double
+
+    @State private var scale: CGFloat = 1.0
+    @State private var offset: CGFloat = 0
+
+    private var animationDuration: Double {
+        if health >= 80 {
+            return 1.5
+        } else if health >= 50 {
+            return 2.0
+        } else if health >= 20 {
+            return 2.8
+        } else {
+            return 4.0
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            .yellow.opacity(health >= 50 ? 0.18 : 0.08),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 10,
+                        endRadius: 100
+                    )
+                )
+                .frame(width: 190, height: 190)
+
+            Text(emoji)
+                .font(.system(size: 125))
+                .scaleEffect(scale)
+                .offset(y: offset)
+                .shadow(
+                    color: .yellow.opacity(0.15),
+                    radius: 15
+                )
+        }
+        .onAppear {
+            startAnimation()
+        }
+    }
+
+    private func startAnimation() {
+        scale = 1.0
+        offset = 0
+
+        withAnimation(
+            .easeInOut(duration: animationDuration)
+                .repeatForever(autoreverses: true)
+        ) {
+            scale = 1.05
+            offset = -8
+        }
     }
 }
 
@@ -676,6 +720,133 @@ struct MochiCardModifier: ViewModifier {
 extension View {
     func mochiCard() -> some View {
         modifier(MochiCardModifier())
+    }
+}
+
+struct OnboardingView: View {
+
+    @Binding var userName: String
+    @Binding var isDarkMode: Bool
+    @Binding var hasCompletedOnboarding: Bool
+
+    var body: some View {
+        VStack(spacing: 30) {
+
+            Spacer()
+
+            Text("🐣")
+                .font(.system(size: 90))
+
+            Text("Welcome to Mochi")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            Text("Your little screen-time companion")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 12) {
+
+                Text("What's your name?")
+                    .font(.headline)
+
+                TextField("Enter your name", text: $userName)
+                    .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+
+                Text("Choose your theme")
+                    .font(.headline)
+
+                HStack(spacing: 15) {
+
+                    themeButton(
+                        title: "Light",
+                        icon: "sun.max.fill",
+                        dark: false
+                    )
+
+                    themeButton(
+                        title: "Dark",
+                        icon: "moon.fill",
+                        dark: true
+                    )
+                }
+            }
+
+            Spacer()
+
+            Button {
+                let trimmedName = userName.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+
+                if !trimmedName.isEmpty {
+                    userName = trimmedName
+                    hasCompletedOnboarding = true
+                }
+            } label: {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        userName.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        ).isEmpty
+                        ? Color.gray
+                        : Color.blue
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .disabled(
+                userName.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                ).isEmpty
+            )
+        }
+        .padding(25)
+    }
+
+    @ViewBuilder
+    private func themeButton(
+        title: String,
+        icon: String,
+        dark: Bool
+    ) -> some View {
+
+        Button {
+            isDarkMode = dark
+        } label: {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title2)
+
+                Text(title)
+                    .font(.subheadline)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(
+                isDarkMode == dark
+                ? Color.blue.opacity(0.15)
+                : Color.secondary.opacity(0.1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        isDarkMode == dark
+                        ? Color.blue
+                        : Color.clear,
+                        lineWidth: 2
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
     }
 }
 
