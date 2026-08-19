@@ -20,14 +20,14 @@ struct ContentView: View {
     @AppStorage("recoveryStartTime") private var recoveryStartTime: Double = 0
     @AppStorage("dailyUsageSeconds") private var dailyUsageSeconds: Double = 0
     @AppStorage("dailyUsageDate") private var dailyUsageDate = ""
-    @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 2 * 60 * 60
+    @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 3 * 60 * 60
     @AppStorage("streakCount") private var streakCount = 0
     @AppStorage("streakLastDate") private var streakLastDate = ""
     @AppStorage("sessionStartHealth") private var sessionStartHealth = 100
     @AppStorage("dayResultsData") private var dayResultsData: Data = Data()
     @AppStorage("isDarkMode") private var isDarkMode = true
     @State private var currentDate = Date()
-    @State private var testingMode = true
+    @State private var testingMode = false
     @State private var petScale = 1.0
     @State private var petOffset: CGFloat = 0
     
@@ -141,7 +141,7 @@ struct ContentView: View {
         firstContent.sound = .default
         
         let firstTrigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: 10,
+            timeInterval: 60 * 60,
             repeats: false
         )
         
@@ -160,7 +160,7 @@ struct ContentView: View {
         secondContent.sound = .default
         
         let secondTrigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: 40,
+            timeInterval: 2 * 60 * 60,
             repeats: false
         )
         
@@ -178,7 +178,7 @@ struct ContentView: View {
         finalContent.sound = .default
         
         let finalTrigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: 60,
+            timeInterval: 3 * 60 * 60,
             repeats: false
         )
         
@@ -320,38 +320,17 @@ struct ContentView: View {
     }
     
     private func healthForElapsedTime(_ seconds: TimeInterval) -> Int {
-        if testingMode {
-            let healthLoss: Int
-            
-            if seconds < 10 {
-                healthLoss = 0
-            } else if seconds < 20 {
-                healthLoss = 10
-            } else if seconds < 30 {
-                healthLoss = 20
-            } else if seconds < 40 {
-                healthLoss = 35
-            } else if seconds < 60 {
-                healthLoss = 50
-            } else if seconds < 90 {
-                healthLoss = 75
-            } else {
-                healthLoss = 100
-            }
-            
-            return max(0, sessionStartHealth - healthLoss)
-        }
-        else {
-            let twoHours: TimeInterval = 2 * 60 * 60
-            let percentage = max(0, 1 - (seconds / twoHours))
-            
-            return Int(percentage * 100)
-        }
+
+        let percentage = max(
+            0,
+            1 - (seconds / dailyGoalSeconds)
+        )
+
+        return Int(percentage * 100)
     }
     
     private func healthForRecovery(_ seconds: TimeInterval) -> Int {
-        let recoveryPoints = Int(seconds / 10) * 5
-        
+        let recoveryPoints = Int(seconds / (10 * 60)) * 5
         return min(100, health + recoveryPoints)
     }
     
@@ -703,7 +682,7 @@ extension View {
 struct CalendarView: View {
     @AppStorage("dayResults") private var dayResultsData: Data = Data()
     @AppStorage("dailyUsageSeconds") private var dailyUsageSeconds: Double = 0
-    @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 2 * 60 * 60
+    @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 3 * 60 * 60
 
     @State private var displayedMonth = Date()
 
