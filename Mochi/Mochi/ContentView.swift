@@ -24,7 +24,7 @@ struct ContentView: View {
     @AppStorage("streakCount") private var streakCount = 0
     @AppStorage("streakLastDate") private var streakLastDate = ""
     @AppStorage("sessionStartHealth") private var sessionStartHealth = 100
-    @AppStorage("dayResults") private var dayResultsData: Data = Data()
+    @AppStorage("dayResultsData") private var dayResultsData: Data = Data()
     @State private var currentDate = Date()
     @State private var testingMode = true
     @State private var petScale = 1.0
@@ -202,6 +202,14 @@ struct ContentView: View {
         center.add(finalRequest)
     }
     
+    private func dateKey(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.calendar = Calendar.current
+        formatter.timeZone = Calendar.current.timeZone
+        return formatter.string(from: date)
+    }
+    
     private func cancelBreakNotifications() {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(
@@ -263,21 +271,29 @@ struct ContentView: View {
     }
     
     private func resetUsageIfNewDay() {
+
         let calendar = Calendar.current
-        
         let today = calendar.startOfDay(for: Date())
-        let todayTimestamp = today.timeIntervalSince1970
-        let todayString = String(todayTimestamp)
-        
+        let todayString = dateKey(today)
+
         if dailyUsageDate.isEmpty {
             dailyUsageDate = todayString
+
+            streakCount = 1
+            streakLastDate = todayString
+
+            saveDayResult(
+                date: todayString,
+                achieved: dailyUsageSeconds <= dailyGoalSeconds
+            )
+
             return
         }
-        
+
         if dailyUsageDate == todayString {
             return
         }
-        
+
         let previousDayAchieved = dailyUsageSeconds <= dailyGoalSeconds
 
         saveDayResult(
@@ -286,9 +302,6 @@ struct ContentView: View {
         )
 
         if previousDayAchieved {
-            let previousDate = Date(
-                timeIntervalSince1970: Double(dailyUsageDate) ?? 0
-            )
 
             let yesterday = calendar.date(
                 byAdding: .day,
@@ -296,18 +309,23 @@ struct ContentView: View {
                 to: today
             )!
 
-            if calendar.isDate(previousDate, inSameDayAs: yesterday) {
+            let yesterdayString = dateKey(yesterday)
+
+            if dailyUsageDate == yesterdayString {
                 streakCount += 1
             } else {
                 streakCount = 1
             }
 
             streakLastDate = dailyUsageDate
+
         } else {
+
             streakCount = 0
             streakLastDate = ""
         }
-        
+
+        // Start the new day
         dailyUsageSeconds = 0
         dailyUsageDate = todayString
     }
@@ -649,11 +667,12 @@ extension View {
 }
 
 struct CalendarView: View {
-    
     @AppStorage("dayResults") private var dayResultsData: Data = Data()
-    
+    @AppStorage("dailyUsageSeconds") private var dailyUsageSeconds: Double = 0
+    @AppStorage("dailyGoalSeconds") private var dailyGoalSeconds: Double = 2 * 60 * 60
+
     @State private var displayedMonth = Date()
-    
+
     private let calendar = Calendar.current
     
     private var dayResults: [DayResult] {
@@ -710,15 +729,28 @@ struct CalendarView: View {
             % 7
     }
     
-    private func result(for date: Date) -> Bool? {
+    private func dateKey(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        
-        let dateString = formatter.string(from: date)
-        
-        return dayResults.first {
-            $0.date == dateString
-        }?.achieved
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        return formatter.string(from: date)
+    }
+    
+    private func result(for date: Date) -> Bool? {
+        let key = dateKey(date)
+
+        if calendar.isDateInToday(date) {
+            return dailyUsageSeconds <= dailyGoalSeconds
+        }
+
+        for result in dayResults {
+            if result.date == key {
+                return result.achieved
+            }
+        }
+
+        return nil
     }
     
     private func isToday(_ date: Date) -> Bool {
@@ -851,6 +883,9 @@ struct CalendarView: View {
         }
         .navigationTitle("Calendar")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            print("DAY RESULTS:", dayResults)
+        }
     }
 }
 
